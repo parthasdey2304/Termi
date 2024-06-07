@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Check if a file is provided as an argument
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 directory_structure.txt"
+    exit 1
+fi
+
+# Read the file
+file=$1
+
+# Initialize variables
+current_path=""
+
+# Read the file line by line
+while IFS= read -r line; do
+    # Remove leading spaces and ├──, └──, ── characters
+    line_clean=$(echo "$line" | sed 's/[│├└── ]*//g')
+
+    # Determine the depth level (number of leading spaces / 4)
+    depth=$(echo "$line" | sed -e 's/[^ ]//g' -e 's/    /\t/g' | tr -d ' ' | wc -c)
+
+    # Adjust the current path
+    current_path=$(echo "$current_path" | awk -v depth="$depth" -F/ '{OFS="/"; NF=depth; print}')
+
+    # Append the cleaned line to the current path
+    full_path="$current_path/$line_clean"
+
+    # If the line ends with a slash, it's a directory
+    if [[ "$line" == */ ]]; then
+        mkdir -p "$full_path"
+    else
+        # Otherwise, it's a file
+        touch "$full_path"
+    fi
+done < "$file"
+
+echo "Directory structure created successfully."
