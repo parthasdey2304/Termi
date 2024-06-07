@@ -11,6 +11,8 @@ file=$1
 
 # Initialize variables
 current_path=""
+path_stack=()
+counter = 0
 
 # Read the file line by line
 while IFS= read -r line; do
@@ -18,13 +20,17 @@ while IFS= read -r line; do
     line_clean=$(echo "$line" | sed 's/[│├└── ]*//g')
 
     # Determine the depth level (number of leading spaces / 4)
-    depth=$(echo "$line" | sed -e 's/[^ ]//g' -e 's/    /\t/g' | tr -d ' ' | wc -c)
+    depth=$(echo "$line" | sed -e 's/[^ ]//g' | wc -c)
+    depth=$((depth / 4))
 
-    # Adjust the current path
-    current_path=$(echo "$current_path" | awk -v depth="$depth" -F/ '{OFS="/"; NF=depth; print}')
+    # Adjust the current path stack
+    while [ ${#path_stack[@]} -gt $depth ]; do
+        unset path_stack[${#path_stack[@]}-1]
+    done
 
     # Append the cleaned line to the current path
-    full_path="$current_path/$line_clean"
+    path_stack+=("$line_clean")
+    full_path=$(IFS=/; echo "${path_stack[*]}")
 
     # If the line ends with a slash, it's a directory
     if [[ "$line" == */ ]]; then
@@ -36,3 +42,4 @@ while IFS= read -r line; do
 done < "$file"
 
 echo "Directory structure created successfully."
+
